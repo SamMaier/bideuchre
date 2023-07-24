@@ -15,7 +15,8 @@ class PlayingStrategy:
   def follow(self, hand: list[Card], cards_remaining: list[Card], cards_laid: list[Card]) -> Card:
     return hand[0]
 
-  def take_kitty(self, hand: list[Card], trump: Suit, kitty: list[Card]):
+  # Returns discarded cards.
+  def take_kitty(self, hand: list[Card], trump: Suit, kitty: list[Card]) -> list[Card]:
     return kitty
     
 
