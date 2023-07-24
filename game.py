@@ -2,7 +2,7 @@ from cards import Suit, Card
 from player import Player
 
 FULL_DECK = [Card(s, i) for i in range(9, 15) for s in [Suit.SUIT_1, Suit.SUIT_2, Suit.SUIT_3, Suit.SUIT_4]] * 2
-print(FULL_DECK)
+print(', '.join(map(str, FULL_DECK)))
 class Hand:
   def __init__(self, players: list[Player], dealer: int):
     self.players = players[dealer:] + players[:dealer]
