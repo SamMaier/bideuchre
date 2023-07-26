@@ -1,6 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
+import logging
 
 
 class Suit(Enum):
@@ -10,10 +11,10 @@ class Suit(Enum):
   SUIT_3 = 3 # CLUBS
   SUIT_4 = 4 # SPADES
 
-  def left(self, other):
-    if self == Suit.TRUMP or other == Suit.TRUMP:
-      return False
-    return self.value % 2 != other.value % 2 and (self.value + 1) // 2 == (other.value + 1) // 2
+  def left(self):
+    if self == Suit.TRUMP:
+      return None
+    return Suit(self.value + 1 if self.value % 2 == 1 else self.value - 1)
 
   def __str__(self):
     match self:
@@ -41,6 +42,16 @@ class Card:
   suit: Suit
   number: int
 
+  # Returns 0 if not boss. 1 if boss in offsuit but trump exists. 10 if unbeatable.
+  def is_boss(self, cards_remaining: list[Card]) -> int:
+    if Card.max([self] + cards_remaining) == 0:
+      return 10
+    for c in cards_remaining:
+      if c.suit == self.suit and c.number > self.number:
+        return 0
+    return 1
+
+  # Returns the index in the list given, assuming that the first is the suit led.
   @staticmethod
   def max(cards: list[Card]) -> int:
     curr_max = 0
@@ -68,7 +79,7 @@ class Card:
         suit = Suit.TRUMP
         if c.number == 11:
           number = 16
-      elif c.number == 11 and trump.left(c.suit): 
+      elif c.number == 11 and c.suit == trump.left(): 
         suit = Suit.TRUMP
         number = 15
       retval.append(Card(suit, number))
@@ -91,4 +102,12 @@ class Card:
       conv_number = 'RB'
 
     return f'{conv_number}{self.suit}'
+
+  def __bool__(self):
+    if self.number == 15 or self.number == 16 and self.suit == Suit.TRUMP:
+      return True
+    elif self.number < 8 or self.number > 14:
+      logging.error(f'Invalid card: {self.number} {self.suit}')
+      return False
+    return True
 

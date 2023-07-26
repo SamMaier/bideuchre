@@ -13,10 +13,11 @@ PLAYER_COUNT = 4
 HAND_SIZE = (len(FULL_DECK) - KITTY_SIZE) // PLAYER_COUNT
 class Hand:
   def __init__(self, players: list[Player], dealer: int):
+    self.reverse_scores = dealer % 2
     self.players = players[dealer:] + players[:dealer]
 
   def play_hand(self) -> tuple[int, int]:
-    logging.info(f'Playing hand, dealer is {self.players[0].name}.')
+    logging.info(f'Dealer + first bid is {self.players[0].name}.')
     # Deal
     shuffled = random.sample(FULL_DECK, k=DECK_SIZE)
     kitty = shuffled[-KITTY_SIZE:]
@@ -26,17 +27,16 @@ class Hand:
 
     # Bids
     prev_bids = []
-    curr_bid = None
+    curr_max = 0
     for i, p in enumerate(self.players):
-      bid = p.bid(prev_bids, curr_bid)
+      bid = p.bid(prev_bids, curr_max)
       if bid is not None:
-        if curr_bid is not None:
-          assert bid[0] > curr_bid[0]
-        curr_bid = bid
+        assert bid[0] > curr_max
+        curr_max = bid[0]
         winner = i
-      prev_bids.append(curr_bid)
-    trump = curr_bid[1]
-    amount = curr_bid[0]
+      prev_bids.append(bid)
+    amount = prev_bids[winner][0]
+    trump = prev_bids[winner][1]
     logging.debug(f'Winning bid is {amount}{trump}')
 
     for i, p in enumerate(self.players):
@@ -73,30 +73,32 @@ class Hand:
     else:
       tricks[winner%2] = -amount
       
+    if self.reverse_scores:
+      return [tricks[1], tricks[0]]
     return tricks
 
 class Game:
   def __init__(self, players: list[Player]):
     assert len(players) == PLAYER_COUNT
     self.players = players
+    self.team0 = ''
+    self.team1 = ''
+    for i in range(len(self.players)):
+      if i%2 == 0:
+        self.team0 += self.players[i].name
+      else:
+        self.team1 += self.players[i].name
 
   def play_game(self, num_hands=12) -> tuple[int, int]:
     first_deal = random.randrange(4)
     logging.info(f'Starting game - first dealer is {self.players[first_deal].name}')
-    team0 = ''
-    team1 = ''
-    for i in range(len(self.players)):
-      if i%2 == 0:
-        team0 += self.players[i].name
-      else:
-        team1 += self.players[i].name
-    logging.info(f'{team0} vs {team1}')
+    logging.info(f'{self.team0} vs {self.team1}')
     score = [0,0]
     for i in range(num_hands):
       h = Hand(self.players, dealer=(i + first_deal) % 4)
       results = h.play_hand()
       score[0] += results[0]
       score[1] += results[1]
-      logging.info(f'{team0}: {score[0]}, {team1}: {score[1]}')
+      logging.info(f'{self.team0}: {score[0]}, {self.team1}: {score[1]}')
 
     return score

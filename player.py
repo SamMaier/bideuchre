@@ -49,6 +49,11 @@ class Player:
       card = self.playing_strat.follow(self.hand, cards_remaining, cards_laid)
     else:
       card = self.playing_strat.lead(self.hand, cards_remaining)
+    if not card:
+      logging.error(f'{self.name} failed to play with:')
+      logging.error(f'Hand failed to play with: {Card.stringify(self.hand)}')
+      logging.error(f'Laid: {Card.stringify(cards_laid)}')
+      logging.error(f'Remaining: {Card.stringify(cards_remaining)}')
 
     self.hand.remove(card)
     return card
