@@ -25,7 +25,10 @@ class Player:
     logging.debug('   with hand ' + Card.stringify(self.hand))
     return b
 
-  def bidding_finished(self, trump: Suit, kitty: Optional[list[Card]] = None) -> Optional[list[Card]]:
+  def bidding_finished(self,
+                       trump: Suit,
+                       kitty: Optional[list[Card]] = None,
+                       partner_alone: Optional[bool] = None) -> Optional[list[Card]]:
     if trump != Suit.TRUMP:
       self.hand = Card.convert_to_trump(self.hand, trump)
     if kitty:
@@ -37,6 +40,11 @@ class Player:
         self.hand.remove(d)
       logging.debug(f'{self.name} discards {Card.stringify(self.discarded_cards)}')
       return self.discarded_cards
+    if partner_alone:
+      give_two = self.playing_strat.give_two_to_partner(self.hand, trump)
+      for c in give_two:
+        self.hand.remove(c)
+      return give_two
 
 
   def play_card(self, cards_remaining: list[Card], cards_laid: list[Card]) -> Card:

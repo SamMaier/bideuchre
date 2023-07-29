@@ -10,6 +10,7 @@ FULL_DECK = sorted([Card(s, i) for i in range(9, 15) for s in [Suit.SUIT_1, Suit
 DECK_SIZE = len(FULL_DECK)
 KITTY_SIZE = 4
 PLAYER_COUNT = 4
+LONE_HAND_POINTS = 16
 HAND_SIZE = (len(FULL_DECK) - KITTY_SIZE) // PLAYER_COUNT
 class Hand:
   def __init__(self, players: list[Player], dealer: int):
@@ -39,10 +40,21 @@ class Hand:
     trump = prev_bids[winner][1]
     logging.debug(f'Winning bid is {amount}{trump}')
 
+    discarded_cards = []
+    out_of_game = None
+    # LONE HAND!
+    if amount > HAND_SIZE:
+      amount = LONE_HAND_POINTS
+      # TODO - will need a system for 6 hand to pick who to give.
+      out_of_game = (winner + 2) % PLAYER_COUNT
+      given_cards = self.players[out_of_game].bidding_finished(trump, partner_alone = True)
+      kitty += given_cards
+      discarded_cards += self.players[out_of_game].hand
+
     for i, p in enumerate(self.players):
       c = p.bidding_finished(trump, kitty=kitty if i==winner else None)
       if c:
-        discarded_cards = c
+        discarded_cards += c
 
     cards_remaining = FULL_DECK.copy()
     if trump != Suit.TRUMP:
@@ -55,19 +67,27 @@ class Hand:
     for i in range(HAND_SIZE):
       printstr = f'{i}:'
       cards_laid = []
-      for i in range(PLAYER_COUNT):
-        player = self.players[(i + leader) % PLAYER_COUNT]
-        c = player.play_card(cards_remaining, cards_laid)
-        cards_laid.append(c)
-        cards_remaining.remove(c)
-        printstr += f'  {player.name} {c}'
+      for j in range(PLAYER_COUNT):
+        idx = (j + leader) % PLAYER_COUNT
+        if idx != out_of_game:
+          player = self.players[idx]
+          c = player.play_card(cards_remaining, cards_laid)
+          cards_laid.append(c)
+          cards_remaining.remove(c)
+          printstr += f'  {player.name} {c}'
       leader = (Card.max(cards_laid) + leader) % PLAYER_COUNT
       tricks[leader % 2] += 1
       logging.info(printstr)
     logging.info(f'Bidder won {tricks[winner%2]}, other {tricks[(winner+1)%2]}')
-    assert(cards_remaining == sorted(discarded_cards))
+    if cards_remaining != sorted(discarded_cards):
+      logging.error(f'{Card.stringify(cards_remaining)}')
+      logging.error(f'{Card.stringify(sorted(discarded_cards))}')
+      assert False
 
     # Score
+    if amount > HAND_SIZE and tricks[winner%2] == HAND_SIZE:
+      # Little hack to make lone hands score naturally
+      tricks[winner%2] = amount
     if tricks[winner%2] >= amount:
       tricks[winner%2] = amount
     else:
