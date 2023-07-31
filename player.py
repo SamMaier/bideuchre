@@ -13,11 +13,11 @@ class Player:
     self.discarded_cards = None
 
   def deal_hand(self, hand: list[Card]):
-    self.hand = sorted(hand)
+    self.hand = sorted(hand, reverse=True)
     self.discarded_cards = None
 
-  def bid(self, prev_bids: list[Bid], curr_bid: Optional[Bid]) -> Bid:
-    b = self.bidding_strat.bid(self.hand, prev_bids, curr_bid)
+  def bid(self, prev_bids: list[Bid], curr_bid: int, score_delta: int, hands_left: int) -> Bid:
+    b = self.bidding_strat.bid(self.hand, prev_bids, curr_bid, score_delta, hands_left)
     if b:
       logging.info(f'{self.name} bidding {b[0]}{b[1]}')
     else:

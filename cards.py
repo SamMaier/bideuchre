@@ -11,6 +11,10 @@ class Suit(Enum):
   SUIT_3 = 3 # CLUBS
   SUIT_4 = 4 # SPADES
 
+  @staticmethod
+  def just_suits():
+    return [Suit.SUIT_1, Suit.SUIT_2, Suit.SUIT_3, Suit.SUIT_4]
+
   def left(self):
     if self == Suit.TRUMP:
       return None
@@ -21,13 +25,16 @@ class Suit(Enum):
       case Suit.TRUMP:
         return 'T'
       case Suit.SUIT_1:
-        return 'H'
+        return '♥'
       case Suit.SUIT_2:
-        return 'D'
+        return '♦'
       case Suit.SUIT_3:
-        return 'C'
+        return '♣'
       case Suit.SUIT_4:
-        return 'S'
+        return '♠'
+
+  def __repr__(self):
+    return str(self)
 
   def __lt__(self, other):
     if self == Suit.TRUMP:
@@ -83,7 +90,7 @@ class Card:
         suit = Suit.TRUMP
         number = 15
       retval.append(Card(suit, number))
-    return sorted(retval)
+    return sorted(retval, reverse=True)
 
 
   def __str__(self):
@@ -102,6 +109,9 @@ class Card:
       conv_number = 'RB'
 
     return f'{conv_number}{self.suit}'
+
+  def __repr__(self):
+    return str(self)
 
   def __bool__(self):
     if self.number == 15 or self.number == 16 and self.suit == Suit.TRUMP:
