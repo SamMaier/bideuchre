@@ -4,13 +4,9 @@ import logging
 
 from cards import Suit, Card
 from player import Player
-from constants import PLAYER_COUNT, LONE_HAND_POINTS
+from constants import DECK_SIZE, FULL_DECK, HAND_SIZE, KITTY_SIZE, LONE_HAND_POINTS, PLAYER_COUNT
 
 
-FULL_DECK = sorted([Card(s, i) for i in range(9, 15) for s in [Suit.SUIT_1, Suit.SUIT_2, Suit.SUIT_3, Suit.SUIT_4]] * 2, reverse=True)
-DECK_SIZE = len(FULL_DECK)
-KITTY_SIZE = 4
-HAND_SIZE = (len(FULL_DECK) - KITTY_SIZE) // PLAYER_COUNT
 class Hand:
   def __init__(self, players: list[Player], dealer: int, score: list[int], hands_left: int):
     self.reverse_scores = dealer % 2
@@ -52,12 +48,12 @@ class Hand:
       amount = LONE_HAND_POINTS
       # TODO - will need a system for 6 hand to pick who to give.
       out_of_game = (winner + 2) % PLAYER_COUNT
-      given_cards = self.players[out_of_game].bidding_finished(trump, partner_alone = True)
+      given_cards = self.players[out_of_game].bidding_finished(trump, None, None, partner_alone = True)
       kitty += given_cards
       discarded_cards += self.players[out_of_game].hand
 
     for i, p in enumerate(self.players):
-      c = p.bidding_finished(trump, kitty=kitty if i==winner else None)
+      c = p.bidding_finished(trump, prev_bids, i, kitty=kitty if i==winner else None)
       if c:
         discarded_cards += c
 
@@ -80,6 +76,10 @@ class Hand:
           cards_laid.append(c)
           cards_remaining.remove(c)
           printstr += f'  {player.name} {c}'
+      for j in range(PLAYER_COUNT):
+        idx = (j + leader) % PLAYER_COUNT
+        if idx != out_of_game:
+          self.players[idx].update_info(cards_laid, cards_remaining, j)
       trick_win = Card.max(cards_laid)
       if out_of_game is not None and trick_win >= out_of_game:
         trick_win += 1

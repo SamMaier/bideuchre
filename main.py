@@ -40,5 +40,6 @@ run_many_games(g, 100)
 
 # Things to figure out:
 # - Does algorithm of most constrained -> least work for biased card distribution?
+# - Multiprocessing for faster games
 # - What is the probability of getting a lone hand if forced to?
 # - Function for probability of winning at all given score diff with hands remaining  

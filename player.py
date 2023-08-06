@@ -27,10 +27,18 @@ class Player:
 
   def bidding_finished(self,
                        trump: Suit,
+                       prev_bids: list[Bid],
+                       my_index: int,
                        kitty: Optional[list[Card]] = None,
                        partner_alone: Optional[bool] = None) -> Optional[list[Card]]:
     if trump != Suit.TRUMP:
       self.hand = Card.convert_to_trump(self.hand, trump)
+    if partner_alone:
+      give_two = self.playing_strat.give_two_to_partner(self.hand, trump)
+      for c in give_two:
+        self.hand.remove(c)
+      return give_two
+
     if kitty:
       logging.debug(f'{self.name} wins kitty {Card.stringify(kitty)}')
       kitty = Card.convert_to_trump(kitty, trump)
@@ -39,13 +47,17 @@ class Player:
       for d in self.discarded_cards:
         self.hand.remove(d)
       logging.debug(f'{self.name} discards {Card.stringify(self.discarded_cards)}')
-      return self.discarded_cards
-    if partner_alone:
-      give_two = self.playing_strat.give_two_to_partner(self.hand, trump)
-      for c in give_two:
-        self.hand.remove(c)
-      return give_two
 
+    self.playing_strat.start_hand(hand, prev_bids, my_index, self.discarded_cards)
+    if kitty:
+      return self.discarded_cards
+
+
+  def update(self, cards_laid: list[Card], cards_remaining: list[Card], my_index: int):
+    cr = cards_remaining.copy()
+    for c in self.hand:
+      cr.remove(c)
+    self.playing_strat.update(cards_laid, cr, my_index)
 
   def play_card(self, cards_remaining: list[Card], cards_laid: list[Card]) -> Card:
     if self.discarded_cards:
