@@ -302,6 +302,7 @@ class PlayingStrategy:
 
   def lead(self, hand: list[Card], cards_remaining: list[Card]) -> Card:
     raise Exception()
+  # TODO - rework this, just add currently winning team, the winning card, and who is left to play
   def follow(self, hand: list[Card], cards_remaining: list[Card], cards_laid: list[Card]) -> Card:
     raise Exception()
   # Returns discarded cards.
