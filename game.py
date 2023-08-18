@@ -23,7 +23,7 @@ class Hand:
     kitty = shuffled[-KITTY_SIZE:]
     shuffled = shuffled[:-KITTY_SIZE]
     for i in range(len(self.players)):
-      self.players[i].deal_hand(shuffled[i*HAND_SIZE:(i+1)*HAND_SIZE])
+      self.players[i].deal_hand(shuffled[i*HAND_SIZE:(i+1)*HAND_SIZE], i%2)
 
     # Bids
     prev_bids = []
@@ -67,19 +67,21 @@ class Hand:
     tricks = [0,0]
     for i in range(HAND_SIZE):
       printstr = f'{i}:'
-      cards_laid = []
+      cards_laid = {j: None for j in range(4)}
+      if out_of_game:
+        del(cards_laid[out_of_game])
       for j in range(PLAYER_COUNT):
         idx = (j + leader) % PLAYER_COUNT
         if idx != out_of_game:
           player = self.players[idx]
-          c = player.play_card(cards_remaining, cards_laid)
+          c = player.play_card(cards_laid, cards_remaining)
           cards_laid.append(c)
           cards_remaining.remove(c)
           printstr += f'  {player.name} {c}'
       for j in range(PLAYER_COUNT):
         idx = (j + leader) % PLAYER_COUNT
         if idx != out_of_game:
-          self.players[idx].update_info(cards_laid, cards_remaining, j)
+          self.players[idx].update(cards_laid, cards_remaining, j)
       trick_win = Card.max(cards_laid)
       if out_of_game is not None and trick_win >= out_of_game:
         trick_win += 1

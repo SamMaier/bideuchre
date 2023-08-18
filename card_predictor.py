@@ -45,6 +45,9 @@ class CardPredictor:
 
     return card_knowledge
 
+  def get_odds_of_card(self, card: Card):
+    # TODO
+
   def update(self, cards_laid: list[Card], cards_remaining: list[Card], my_index: int):
     suit_led = cards_laid[0].suit
     for i, c in enumerate(cards_laid):

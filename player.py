@@ -12,9 +12,10 @@ class Player:
     self.hand = []
     self.discarded_cards = None
 
-  def deal_hand(self, hand: list[Card]):
+  def deal_hand(self, hand: list[Card], team: bool):
     self.hand = sorted(hand, reverse=True)
     self.discarded_cards = None
+    self.team = team
 
   def bid(self, prev_bids: list[Bid], curr_bid: int, score_delta: int, hands_left: int) -> Bid:
     b = self.bidding_strat.bid(self.hand, prev_bids, curr_bid, score_delta, hands_left)
@@ -53,13 +54,14 @@ class Player:
       return self.discarded_cards
 
 
-  def update(self, cards_laid: list[Card], cards_remaining: list[Card], my_index: int):
+  def update(self, cards_laid: dict[int, Card], cards_remaining: list[Card], my_index: int):
     cr = cards_remaining.copy()
     for c in self.hand:
       cr.remove(c)
     self.playing_strat.update(cards_laid, cr, my_index)
 
-  def play_card(self, cards_remaining: list[Card], cards_laid: list[Card]) -> Card:
+  def play_card(self, cards_laid: dict[int, Card], cards_remaining: list[Card]) -> Card:
+    cards_laid
     if self.discarded_cards:
       cards_remaining = cards_remaining.copy()
       for x in self.discarded_cards:

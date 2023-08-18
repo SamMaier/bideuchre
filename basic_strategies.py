@@ -261,7 +261,10 @@ class PlayingStrategy:
 
   @staticmethod
   def get_legal_plays(hand: list[Card], cards_laid: list[Card]) -> set[Card]:
-    suit = cards_laid[0].suit
+    if cards_laid[0]:
+      suit = cards_laid[0].suit
+    else:
+      suit = cards_laid[1].suit
     follow_suit = {c for c in hand if c.suit == suit}
     if follow_suit:
       return follow_suit
@@ -347,8 +350,9 @@ class BasicPlayer(PlayingStrategy):
   # Basic player wins with boss card if they have one, lowest else.
   def follow(self, hand: list[Card], cards_remaining: list[Card], cards_laid: list[Card]) -> Card:
     legal_plays = list(PlayingStrategy.get_legal_plays(hand, cards_laid))
+    played_cards = [c for c in cards_remaining.values() if c is not None]
     for c in legal_plays:
-      if c.is_boss(cards_remaining) and Card.max(cards_laid + [c]) == len(cards_laid):
+      if c.is_boss(cards_remaining) and Card.max(played_cards + [c]) == len(played_cards):
         return c
 
     return BasicPlayer.basic_throwaway(legal_plays)
@@ -366,20 +370,59 @@ class BasicPlayer(PlayingStrategy):
 
 
 class GoodPlayer(PlayingStrategy):
+  #def lead(self, hand: list[Card], cards_remaining: list[Card]) -> Card:
+  def follow(self, hand: list[Card], cards_remaining: list[Card], cards_laid: dict[int, Card]) -> Card:
+    legal_plays = list(PlayingStrategy.get_legal_plays(hand, cards_laid))
+    curr_slot = min([c for c in cards_laid if cards_laid[c] is None])
+    # TODO FILL THIS IN
+    partner_played = curr_slot % 2
+    lead_suit = cards_laid[0].suit
+    curr_winner = Card.max(cards_laid)
+    # TODO make this work for lone hands
+    partner_leading = len(cards_laid) - 2 == curr_winner
+    winning_card = cards_laid[curr_winner]
+    suited_cards = [c for c in hand if c.suit == lead_suit]
+
+    if suited_cards:
+      higher_cards = [c for c in suited_cards if c.number > winning_card.number]
+
+      # If you can't beat the leading card, fluff
+      if not higher_cards:
+        return self.optimal_throwaway(suited_cards)
+      
+      if partner_leading:
+        # You only don't fluff if you're not last, and there is a remaining card higher than your
+        # partners, and you tie or beat that higher card.
+        # TODO
+        
+        return self.optimal_throwaway(suited_cards)
+    else:
+      # Playing offsuit
+      trump_options = [c for c in hand if c.suit == Suit.TRUMP]
+      if not trump_options:
+        return self.optimal_throwaway(hand)
+      if partner_leading:
+        return self.optimal_throwaway(hand)
+      if winning_card.suit != Suit.TRUMP:
+        return min(trump_options, key=lambda x: x.number)
+
+      # Always trump in above
+      return min([c for c in trump_options if c.number > winning_card.number], key=lambda x: x.number)
+
 
   def take_kitty(self, hand: list[Card], kitty_size: int) -> list[Card]:
     hand = hand.copy()
     throwaways = []
 
     # Ignore trump since we will never throw it away.
-    suit_counts_with_ace_ct = {s: [0, 0] for s in Suit.JUST_SUITS}
+    suit_counts_with_boss_ct = {s: [0, 0] for s in Suit.JUST_SUITS}
     for c in hand:
       suit_count = suit_counts_with_bare_ace[c.suit]
       suit_count[0] += 1
       if c.number == 14:
         suit_count[1] += 1
     # Priority 1 - Shortsuit any non-Ace suits
-    no_ace_suits = {k, v for k, v in suit_counts_with_ace_ct.items() if v[1] == 0 and v[0] >= 1}
+    no_ace_suits = {k, v for k, v in suit_counts_with_boss_ct.items() if v[1] == 0 and v[0] >= 1}
     while True:
       min_suit = min(no_ace_suits,
                      key=lambda x: no_ace_suits[x][0])
@@ -393,7 +436,7 @@ class GoodPlayer(PlayingStrategy):
         break
 
     # Priority 2 - Make 1 ace bare
-    one_ace_suits = {k, v for k, v in suit_counts_with_ace_ct.items() if v[1] == 1 and v[0] >= 1}
+    one_ace_suits = {k, v for k, v in suit_counts_with_boss_ct.items() if v[1] == 1 and v[0] >= 1}
     min_suit = min(one_ace_suits,
                    key=lambda x: one_ace_suits[x][0])
     if one_ace_suits[min_suit][0] - 1 <= kitty_size - len(throwaways):
@@ -403,18 +446,60 @@ class GoodPlayer(PlayingStrategy):
           throwaways.append(c)
     
     # Priority 3 - throwaway logic
+    outstanding_cards = FULL_DECK
+    for c in hand:
+      outstanding_cards.remove(c)
     for i in range(kitty_size - len(throwaways)):
-      c = GoodPlayer.optimal_throwaway(hand, hand)
+      c = self.optimal_throwaway(hand, hand, outstanding_cards)
       hand.remove(c)
       throwaways.append(c)
 
     assert len(throwaways) == kitty_size
     return 
 
-  def optimal_throwaway(legal_plays: list[Card]):
+  def optimal_throwaway(self, legal_plays: list[Card], remaining_cards: list[Card]):
+    # TODO - rewrite to not throw away boss cards. But if all cards to throw are boss, throw lowest boss.
+    boss_cards = {}
+    playable_cards = {}
+    for s in Suit.JUST_SUITS:
+      boss = max([c for c in remaining_cards+legal_plays if c.suit == s], key=lambda x: x.number)
+      boss_cards[s] = boss.number
+      playable_cards = min([x for x in legal_plays if x.suit == s], key=lambda c: c.number)
+    # Ignoring trump, then covering it if it's our only suit.
+    suit_counts_with_boss_ct = {s: [0, 0] for s in Suit.JUST_SUITS}
+    for c in legal_plays:
+      suit_count = suit_counts_with_boss_ct[c.suit]
+      suit_count[0] += 1
+      if c.number == boss_cards[c.suit]:
+        suit_count[1] += 1
+    num_suits = 0
+    for s, v in suit_counts_with_boss_ct.items():
+      if v[0]:
+        num_suits += 1
+
     # If all same suit, play lowest.
+    if num_suits <= 1:
+      return min(legal_plays, key=lambda c: c.number)
+
     # If choices of suit,
-    #  aim to short suit if suit has no ace
-    #  keep 1 backup if no ace in suit laid yet
-    #  play from suit less likely for opponents to have
-    pass
+    # Aim to short suit if suit has no boss
+    bossless_suits = {x:y for x, y in suit_counts_with_boss_ct.items() if not y[1]}
+    if bossless_suits:
+      no_boss_suit = min(bossless_suits, key=lambda z: bossless_suits[z][0])
+      return playable_cards[no_boss_suit]
+
+    # All suits have boss now. If we have boss, it's single ace, other ace outstanding, and no backups, don't throw.
+    for s, v in list(suit_counts_with_boss_ct.items()):
+      if v[0] <= 2 and v[1] == 1 and Card(s, 14) in remaining_cards and Card(s, 14) in legal_plays:
+        del suit_counts_with_boss_ct[s]
+        del playable_cards[s]
+
+    if playable_cards:
+      # Play the lowest playable
+      suit = min(playable_cards, key=lambda x: x.number)
+      return min(playable_cards[suit])
+    else:
+      # All single protected Aces
+      # Don't need to worry too much, pick randomly.
+      return random.choice(list(legal_plays.values()))
+      
